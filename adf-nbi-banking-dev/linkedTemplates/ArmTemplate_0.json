@@ -632,8 +632,7 @@
 						"          last_transaction_date = max(transaction_date),",
 						"          total_fraud_alerts = count(alert_id),",
 						"          confirmed_fraud_count = sum(iif(is_confirmed_fraud == true(), 1, 0))) ~> aggCustomer360",
-						"aggCustomer360 derive(customer_id = customer_id,",
-						"          full_name = concat(first_name, ' ', last_name)) ~> derivedCustomer360Cols",
+						"aggCustomer360 derive(full_name = concat(first_name, ' ', last_name)) ~> derivedCustomer360Cols",
 						"joinWithLoans, srcFraudAlerts join(srcCustomers@customer_id == srcFraudAlerts@customer_id,",
 						"     joinType:'left',",
 						"     matchType:'exact',",
@@ -1762,14 +1761,7 @@
 					{
 						"name": "df_build_agg_customer_360",
 						"type": "ExecuteDataFlow",
-						"dependsOn": [
-							{
-								"activity": "df_build_agg_branch_performance",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
+						"dependsOn": [],
 						"policy": {
 							"timeout": "0.00:30:00",
 							"retry": 0,
