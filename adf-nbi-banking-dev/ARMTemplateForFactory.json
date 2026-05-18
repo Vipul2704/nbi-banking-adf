@@ -424,6 +424,198 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('factoryName'), '/df_load_dim_branches')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"linkedService": {
+								"referenceName": "ls_blob_nbi_source",
+								"type": "LinkedServiceReference"
+							},
+							"name": "srcCustomerBranches"
+						},
+						{
+							"linkedService": {
+								"referenceName": "ls_blob_nbi_source",
+								"type": "LinkedServiceReference"
+							},
+							"name": "srcAccountBranches"
+						},
+						{
+							"linkedService": {
+								"referenceName": "ls_blob_nbi_source",
+								"type": "LinkedServiceReference"
+							},
+							"name": "srcEmployeeBranches"
+						}
+					],
+					"sinks": [
+						{
+							"linkedService": {
+								"referenceName": "ls_sqldb_nbi_dw",
+								"type": "LinkedServiceReference"
+							},
+							"name": "sinkDimBranches"
+						}
+					],
+					"transformations": [
+						{
+							"name": "selCustomerBranch"
+						},
+						{
+							"name": "selAccountBranch"
+						},
+						{
+							"name": "selEmployeeBranch"
+						},
+						{
+							"name": "unionAllBranches"
+						},
+						{
+							"name": "aggDistinctBranches"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          customer_id as string,",
+						"          first_name as string,",
+						"          last_name as string,",
+						"          date_of_birth as date,",
+						"          gender as string,",
+						"          email as string,",
+						"          mobile as long,",
+						"          city as string,",
+						"          state as string,",
+						"          pincode as integer,",
+						"          customer_type as string,",
+						"          occupation as string,",
+						"          annual_income as double,",
+						"          kyc_status as string,",
+						"          registration_date as date,",
+						"          branch_id as string,",
+						"          relationship_manager_id as string,",
+						"          is_active as boolean,",
+						"          pan_number as string,",
+						"          credit_score as short",
+						"     ),",
+						"     useSchema: false,",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     format: 'delimited',",
+						"     container: 'source-files',",
+						"     fileName: 'bank_customers.csv',",
+						"     columnDelimiter: ',',",
+						"     escapeChar: '\\\\',",
+						"     quoteChar: '\\\"',",
+						"     columnNamesAsHeader: true) ~> srcCustomerBranches",
+						"source(output(",
+						"          account_number as string,",
+						"          customer_id as string,",
+						"          account_type as string,",
+						"          branch_id as string,",
+						"          open_date as date,",
+						"          close_date as date,",
+						"          status as string,",
+						"          current_balance as double,",
+						"          available_balance as double,",
+						"          currency as string,",
+						"          interest_rate as double,",
+						"          nominee_name as string,",
+						"          is_joint_account as boolean,",
+						"          minimum_balance as short",
+						"     ),",
+						"     useSchema: false,",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     format: 'delimited',",
+						"     container: 'source-files',",
+						"     fileName: 'bank_accounts.csv',",
+						"     columnDelimiter: ',',",
+						"     escapeChar: '\\\\',",
+						"     quoteChar: '\\\"',",
+						"     columnNamesAsHeader: true) ~> srcAccountBranches",
+						"source(output(",
+						"          employee_id as string,",
+						"          first_name as string,",
+						"          last_name as string,",
+						"          email as string,",
+						"          mobile as long,",
+						"          department as string,",
+						"          designation as string,",
+						"          branch_id as string,",
+						"          city as string,",
+						"          date_of_joining as date,",
+						"          date_of_birth as date,",
+						"          education as string,",
+						"          certifications as string,",
+						"          base_salary as double,",
+						"          performance_rating as double,",
+						"          manager_id as string,",
+						"          is_active as boolean,",
+						"          total_customers_managed as short",
+						"     ),",
+						"     useSchema: false,",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     format: 'delimited',",
+						"     container: 'source-files',",
+						"     fileName: 'bank_employees.csv',",
+						"     columnDelimiter: ',',",
+						"     escapeChar: '\\\\',",
+						"     quoteChar: '\\\"',",
+						"     columnNamesAsHeader: true) ~> srcEmployeeBranches",
+						"srcCustomerBranches select(mapColumn(",
+						"          city,",
+						"          state,",
+						"          branch_id",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> selCustomerBranch",
+						"srcAccountBranches select(mapColumn(",
+						"          branch_id",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> selAccountBranch",
+						"srcEmployeeBranches select(mapColumn(",
+						"          branch_id,",
+						"          city",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> selEmployeeBranch",
+						"selCustomerBranch, selAccountBranch, selEmployeeBranch union(byName: true)~> unionAllBranches",
+						"unionAllBranches aggregate(groupBy(branch_id),",
+						"     city = first(city),",
+						"          state = first(state)) ~> aggDistinctBranches",
+						"aggDistinctBranches sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     format: 'table',",
+						"     store: 'sqlserver',",
+						"     schemaName: 'dbo',",
+						"     tableName: 'dim_branches',",
+						"     insertable: true,",
+						"     updateable: false,",
+						"     deletable: false,",
+						"     upsertable: false,",
+						"     truncate: true,",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     errorHandlingOption: 'stopOnFirstError') ~> sinkDimBranches"
+					]
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_blob_nbi_source')]",
+				"[concat(variables('factoryId'), '/linkedServices/ls_sqldb_nbi_dw')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/df_load_dim_customers')]",
 			"type": "Microsoft.DataFactory/factories/dataflows",
 			"apiVersion": "2018-06-01",
