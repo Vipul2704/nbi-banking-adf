@@ -388,6 +388,92 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('factoryName'), '/df_load_dim_employees')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"linkedService": {
+								"referenceName": "ls_blob_nbi_source",
+								"type": "LinkedServiceReference"
+							},
+							"name": "srcEmployees"
+						}
+					],
+					"sinks": [
+						{
+							"linkedService": {
+								"referenceName": "ls_sqldb_nbi_dw",
+								"type": "LinkedServiceReference"
+							},
+							"name": "sinkDimEmployees"
+						}
+					],
+					"transformations": [
+						{
+							"name": "derivedEmployeeCols"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          employee_id as string,",
+						"          first_name as string,",
+						"          last_name as string,",
+						"          email as string,",
+						"          mobile as long,",
+						"          department as string,",
+						"          designation as string,",
+						"          branch_id as string,",
+						"          city as string,",
+						"          date_of_joining as date,",
+						"          date_of_birth as date,",
+						"          education as string,",
+						"          certifications as string,",
+						"          base_salary as double,",
+						"          performance_rating as double,",
+						"          manager_id as string,",
+						"          is_active as boolean,",
+						"          total_customers_managed as short",
+						"     ),",
+						"     useSchema: false,",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     format: 'delimited',",
+						"     container: 'source-files',",
+						"     fileName: 'bank_employees.csv',",
+						"     columnDelimiter: ',',",
+						"     escapeChar: '\\\\',",
+						"     quoteChar: '\\\"',",
+						"     columnNamesAsHeader: true) ~> srcEmployees",
+						"srcEmployees derive(certification_count = size(split(certifications, ',')),",
+						"          is_manager = iif(isNull(manager_id), false(), true())) ~> derivedEmployeeCols",
+						"derivedEmployeeCols sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     format: 'table',",
+						"     store: 'sqlserver',",
+						"     schemaName: 'dbo',",
+						"     tableName: 'dim_employees',",
+						"     insertable: true,",
+						"     updateable: false,",
+						"     deletable: false,",
+						"     upsertable: false,",
+						"     truncate: true,",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     errorHandlingOption: 'stopOnFirstError') ~> sinkDimEmployees"
+					]
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_blob_nbi_source')]",
+				"[concat(variables('factoryId'), '/linkedServices/ls_sqldb_nbi_dw')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/pl_load_dimensions')]",
 			"type": "Microsoft.DataFactory/factories/pipelines",
 			"apiVersion": "2018-06-01",
