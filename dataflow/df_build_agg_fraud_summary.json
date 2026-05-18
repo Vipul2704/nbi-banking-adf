@@ -1,0 +1,84 @@
+{
+	"name": "df_build_agg_fraud_summary",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"linkedService": {
+						"referenceName": "ls_sqldb_nbi_dw",
+						"type": "LinkedServiceReference"
+					},
+					"name": "srcFraudAlerts"
+				}
+			],
+			"sinks": [
+				{
+					"linkedService": {
+						"referenceName": "ls_sqldb_nbi_dw",
+						"type": "LinkedServiceReference"
+					},
+					"name": "sinkAggFraudSummary"
+				}
+			],
+			"transformations": [
+				{
+					"name": "aggFraudSummary"
+				},
+				{
+					"name": "derivedFraudSummaryCols"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          alert_id as string,",
+				"          transaction_id as string,",
+				"          account_number as string,",
+				"          customer_id as string,",
+				"          alert_type as string,",
+				"          severity as string,",
+				"          alert_raised_date as date,",
+				"          alert_raised_time as string,",
+				"          alert_status as string,",
+				"          assigned_to as string,",
+				"          unassigned_flag as boolean,",
+				"          resolution as string,",
+				"          resolved_date as date,",
+				"          resolution_days as integer,",
+				"          amount_at_risk as decimal(14,2),",
+				"          is_confirmed_fraud as boolean,",
+				"          sar_filed as boolean",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'table',",
+				"     store: 'sqlserver',",
+				"     schemaName: 'dbo',",
+				"     tableName: 'fact_fraud_alerts',",
+				"     isolationLevel: 'READ_UNCOMMITTED') ~> srcFraudAlerts",
+				"srcFraudAlerts aggregate(groupBy(alert_type,",
+				"          severity),",
+				"     total_alerts = count(1),",
+				"          total_amount_at_risk = sum(toDouble(amount_at_risk)),",
+				"          confirmed_fraud_count = sum(iif(is_confirmed_fraud == true(), 1, 0)),",
+				"          resolved_count = sum(iif(!isNull(resolved_date), 1, 0)),",
+				"          unassigned_count = sum(iif(unassigned_flag == true(), 1, 0))) ~> aggFraudSummary",
+				"aggFraudSummary derive(report_date = currentDate()) ~> derivedFraudSummaryCols",
+				"derivedFraudSummaryCols sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'table',",
+				"     store: 'sqlserver',",
+				"     schemaName: 'dbo',",
+				"     tableName: 'agg_fraud_summary',",
+				"     insertable: true,",
+				"     updateable: false,",
+				"     deletable: false,",
+				"     upsertable: false,",
+				"     truncate: true,",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError') ~> sinkAggFraudSummary"
+			]
+		}
+	}
+}
