@@ -67,6 +67,9 @@
 				},
 				{
 					"name": "joinWithFraud"
+				},
+				{
+					"name": "filterValidCustomers"
 				}
 			],
 			"scriptLines": [
@@ -225,7 +228,7 @@
 				"     matchType:'exact',",
 				"     ignoreSpaces: false,",
 				"     broadcast: 'auto')~> joinWithLoans",
-				"joinWithFraud aggregate(groupBy(srcCustomers@customer_id,",
+				"filterValidCustomers aggregate(groupBy(srcCustomers@customer_id,",
 				"          first_name,",
 				"          last_name,",
 				"          city,",
@@ -248,6 +251,7 @@
 				"     matchType:'exact',",
 				"     ignoreSpaces: false,",
 				"     broadcast: 'auto')~> joinWithFraud",
+				"joinWithFraud filter(!isNull(srcCustomers@customer_id)) ~> filterValidCustomers",
 				"derivedCustomer360Cols sink(allowSchemaDrift: true,",
 				"     validateSchema: false,",
 				"     format: 'table',",
