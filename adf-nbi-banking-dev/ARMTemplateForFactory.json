@@ -99,6 +99,7 @@
 									"srcTransactions": {},
 									"srcLoans": {},
 									"srcAccounts": {},
+									"srcFraudAlerts": {},
 									"sinkAggCustomer360": {}
 								}
 							},
@@ -944,6 +945,13 @@
 								"type": "LinkedServiceReference"
 							},
 							"name": "srcAccounts"
+						},
+						{
+							"linkedService": {
+								"referenceName": "ls_sqldb_nbi_dw",
+								"type": "LinkedServiceReference"
+							},
+							"name": "srcFraudAlerts"
 						}
 					],
 					"sinks": [
@@ -970,6 +978,9 @@
 						},
 						{
 							"name": "derivedCustomer360Cols"
+						},
+						{
+							"name": "joinWithFraud"
 						}
 					],
 					"scriptLines": [
@@ -1087,6 +1098,32 @@
 						"     schemaName: 'dbo',",
 						"     tableName: 'dim_accounts',",
 						"     isolationLevel: 'READ_UNCOMMITTED') ~> srcAccounts",
+						"source(output(",
+						"          alert_id as string,",
+						"          transaction_id as string,",
+						"          account_number as string,",
+						"          customer_id as string,",
+						"          alert_type as string,",
+						"          severity as string,",
+						"          alert_raised_date as date,",
+						"          alert_raised_time as string,",
+						"          alert_status as string,",
+						"          assigned_to as string,",
+						"          unassigned_flag as boolean,",
+						"          resolution as string,",
+						"          resolved_date as date,",
+						"          resolution_days as integer,",
+						"          amount_at_risk as decimal(14,2),",
+						"          is_confirmed_fraud as boolean,",
+						"          sar_filed as boolean",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     format: 'table',",
+						"     store: 'sqlserver',",
+						"     schemaName: 'dbo',",
+						"     tableName: 'fact_fraud_alerts',",
+						"     isolationLevel: 'READ_UNCOMMITTED') ~> srcFraudAlerts",
 						"srcTransactions, srcAccounts join(srcTransactions@account_number == srcAccounts@account_number,",
 						"     joinType:'left',",
 						"     matchType:'exact',",
@@ -1102,18 +1139,30 @@
 						"     matchType:'exact',",
 						"     ignoreSpaces: false,",
 						"     broadcast: 'auto')~> joinWithLoans",
-						"joinWithLoans aggregate(groupBy(srcCustomers@customer_id,",
+						"joinWithFraud aggregate(groupBy(srcCustomers@customer_id,",
 						"          first_name,",
 						"          last_name,",
 						"          city,",
-						"          credit_score),",
-						"     total_transactions = count(1),",
-						"          total_transaction_value = sum(toDouble(amount)),",
+						"          credit_score,",
+						"          kyc_status,",
+						"          customer_type),",
+						"     total_accounts_held = countDistinct(srcAccounts@account_number),",
+						"          total_active_accounts = sum(iif(srcAccounts@status == 'Active', 1, 0)),",
 						"          total_loans = count(loan_id),",
-						"          total_loan_amount = sum(toDouble(principal_amount)),",
-						"          avg_loan_amount = avg(toDouble(principal_amount))) ~> aggCustomer360",
-						"aggCustomer360 derive(report_date = currentDate(),",
-						"          customer_id = toString(customer_id)) ~> derivedCustomer360Cols",
+						"          total_outstanding_loan_amt = sum(toDouble(outstanding_amount)),",
+						"          total_npa_loans = sum(iif(is_npa == true(), 1, 0)),",
+						"          txn_value_last_12_months = sum(toDouble(amount)),",
+						"          txn_count_last_12_months = count(srcTransactions@transaction_id),",
+						"          last_transaction_date = max(transaction_date),",
+						"          total_fraud_alerts = count(alert_id),",
+						"          confirmed_fraud_count = sum(iif(is_confirmed_fraud == true(), 1, 0))) ~> aggCustomer360",
+						"aggCustomer360 derive(customer_id = customer_id,",
+						"          full_name = concat(first_name, ' ', last_name)) ~> derivedCustomer360Cols",
+						"joinWithLoans, srcFraudAlerts join(srcCustomers@customer_id == srcFraudAlerts@customer_id,",
+						"     joinType:'left',",
+						"     matchType:'exact',",
+						"     ignoreSpaces: false,",
+						"     broadcast: 'auto')~> joinWithFraud",
 						"derivedCustomer360Cols sink(allowSchemaDrift: true,",
 						"     validateSchema: false,",
 						"     format: 'table',",
@@ -1127,7 +1176,25 @@
 						"     truncate: true,",
 						"     skipDuplicateMapInputs: true,",
 						"     skipDuplicateMapOutputs: true,",
-						"     errorHandlingOption: 'stopOnFirstError') ~> sinkAggCustomer360"
+						"     errorHandlingOption: 'stopOnFirstError',",
+						"     mapColumn(",
+						"          customer_id,",
+						"          city,",
+						"          credit_score,",
+						"          kyc_status,",
+						"          customer_type,",
+						"          total_accounts_held,",
+						"          total_active_accounts,",
+						"          total_loans,",
+						"          total_outstanding_loan_amt,",
+						"          total_npa_loans,",
+						"          txn_value_last_12_months,",
+						"          txn_count_last_12_months,",
+						"          last_transaction_date,",
+						"          total_fraud_alerts,",
+						"          confirmed_fraud_count,",
+						"          full_name",
+						"     )) ~> sinkAggCustomer360"
 					]
 				}
 			},
