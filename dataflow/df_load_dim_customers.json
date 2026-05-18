@@ -1,0 +1,107 @@
+{
+	"name": "df_load_dim_customers",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"linkedService": {
+						"referenceName": "ls_blob_nbi_source",
+						"type": "LinkedServiceReference"
+					},
+					"name": "srcCustomers"
+				}
+			],
+			"sinks": [
+				{
+					"linkedService": {
+						"referenceName": "ls_sqldb_nbi_dw",
+						"type": "LinkedServiceReference"
+					},
+					"name": "sinkDimCustomers"
+				}
+			],
+			"transformations": [
+				{
+					"name": "filterActiveCustomers"
+				},
+				{
+					"name": "selectCustomerCols"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          customer_id as string,",
+				"          first_name as string,",
+				"          last_name as string,",
+				"          date_of_birth as date,",
+				"          gender as string,",
+				"          email as string,",
+				"          mobile as long,",
+				"          city as string,",
+				"          state as string,",
+				"          pincode as integer,",
+				"          customer_type as string,",
+				"          occupation as string,",
+				"          annual_income as double,",
+				"          kyc_status as string,",
+				"          registration_date as date,",
+				"          branch_id as string,",
+				"          relationship_manager_id as string,",
+				"          is_active as boolean,",
+				"          pan_number as string,",
+				"          credit_score as short",
+				"     ),",
+				"     useSchema: false,",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     format: 'delimited',",
+				"     container: 'source-files',",
+				"     fileName: 'bank_customers.csv',",
+				"     columnDelimiter: ',',",
+				"     escapeChar: '\\\\',",
+				"     quoteChar: '\\\"',",
+				"     columnNamesAsHeader: true) ~> srcCustomers",
+				"srcCustomers filter(is_active == true()) ~> filterActiveCustomers",
+				"filterActiveCustomers select(mapColumn(",
+				"          customer_id,",
+				"          first_name,",
+				"          last_name,",
+				"          date_of_birth,",
+				"          gender,",
+				"          email,",
+				"          mobile,",
+				"          city,",
+				"          state,",
+				"          pincode,",
+				"          customer_type,",
+				"          occupation,",
+				"          annual_income,",
+				"          kyc_status,",
+				"          registration_date,",
+				"          branch_id,",
+				"          relationship_manager_id,",
+				"          pan_number,",
+				"          credit_score",
+				"     ),",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true) ~> selectCustomerCols",
+				"selectCustomerCols sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'table',",
+				"     store: 'sqlserver',",
+				"     schemaName: 'dbo',",
+				"     tableName: 'dim_customers',",
+				"     insertable: true,",
+				"     updateable: false,",
+				"     deletable: false,",
+				"     upsertable: false,",
+				"     truncate: true,",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError') ~> sinkDimCustomers"
+			]
+		}
+	}
+}

@@ -1,0 +1,59 @@
+{
+	"name": "pl_load_dimensions",
+	"properties": {
+		"activities": [
+			{
+				"name": "df_load_dim_customers",
+				"type": "ExecuteDataFlow",
+				"dependsOn": [
+					{
+						"activity": "set_inactive_customer_count",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"timeout": "0.00:30:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"dataflow": {
+						"referenceName": "df_load_dim_customers",
+						"type": "DataFlowReference"
+					},
+					"compute": {
+						"coreCount": 8,
+						"computeType": "General"
+					},
+					"traceLevel": "Fine"
+				}
+			},
+			{
+				"name": "set_inactive_customer_count",
+				"type": "SetVariable",
+				"dependsOn": [],
+				"policy": {
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"variableName": "inactive_customer_count",
+					"value": 0
+				}
+			}
+		],
+		"variables": {
+			"inactive_customer_count": {
+				"type": "Integer",
+				"defaultValue": 0
+			}
+		},
+		"annotations": []
+	}
+}
