@@ -1,0 +1,15 @@
+{
+	"name": "adf-nbi-banking-dev",
+	"properties": {
+		"trustModeClaimForMi": {
+			"value": "Enabled",
+			"editable": true
+		}
+	},
+	"location": "centralindia",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "432bd069-4aab-4320-b9fb-e06c91805216",
+		"tenantId": "d1b99a31-59dc-4039-b9c4-f6166b6bf0a4"
+	}
+}
