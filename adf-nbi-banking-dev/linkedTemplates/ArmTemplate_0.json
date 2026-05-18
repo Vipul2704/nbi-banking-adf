@@ -163,6 +163,34 @@
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/linkedServices/ls_blob_nbi_source')]"
 			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_sqldb_nbi_target')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_sqldb_nbi_dw",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"tableName": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "AzureSqlTable",
+				"schema": [],
+				"typeProperties": {
+					"table": {
+						"value": "@dataset().tableName",
+						"type": "Expression"
+					}
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_sqldb_nbi_dw')]"
+			]
 		}
 	]
 }
