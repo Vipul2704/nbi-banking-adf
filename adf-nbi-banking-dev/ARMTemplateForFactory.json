@@ -1204,7 +1204,7 @@
 						"     skipDuplicateMapOutputs: true,",
 						"     errorHandlingOption: 'stopOnFirstError',",
 						"     mapColumn(",
-						"          alert_type = alert_year,",
+						"          alert_year,",
 						"          alert_month,",
 						"          severity,",
 						"          total_alerts_raised,",
