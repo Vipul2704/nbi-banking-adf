@@ -1,0 +1,17 @@
+{
+	"name": "ls_blob_nbi_source",
+	"properties": {
+		"annotations": [],
+		"type": "AzureBlobStorage",
+		"typeProperties": {
+			"connectionString": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "ls_keyvault_nbi",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "storage-connection-string"
+			}
+		}
+	}
+}
