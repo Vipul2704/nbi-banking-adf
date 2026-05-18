@@ -1,0 +1,221 @@
+{
+	"name": "df_build_agg_customer_360",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"linkedService": {
+						"referenceName": "ls_sqldb_nbi_dw",
+						"type": "LinkedServiceReference"
+					},
+					"name": "srcCustomers"
+				},
+				{
+					"linkedService": {
+						"referenceName": "ls_sqldb_nbi_dw",
+						"type": "LinkedServiceReference"
+					},
+					"name": "srcTransactions"
+				},
+				{
+					"linkedService": {
+						"referenceName": "ls_sqldb_nbi_dw",
+						"type": "LinkedServiceReference"
+					},
+					"name": "srcLoans"
+				},
+				{
+					"linkedService": {
+						"referenceName": "ls_sqldb_nbi_dw",
+						"type": "LinkedServiceReference"
+					},
+					"name": "srcAccounts"
+				}
+			],
+			"sinks": [
+				{
+					"linkedService": {
+						"referenceName": "ls_sqldb_nbi_dw",
+						"type": "LinkedServiceReference"
+					},
+					"name": "sinkAggCustomer360"
+				}
+			],
+			"transformations": [
+				{
+					"name": "joinTxnAccounts"
+				},
+				{
+					"name": "joinCustTxn"
+				},
+				{
+					"name": "joinWithLoans"
+				},
+				{
+					"name": "aggCustomer360"
+				},
+				{
+					"name": "derivedCustomer360Cols"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          customer_id as string,",
+				"          first_name as string,",
+				"          last_name as string,",
+				"          date_of_birth as date,",
+				"          gender as string,",
+				"          email as string,",
+				"          mobile as string,",
+				"          city as string,",
+				"          state as string,",
+				"          pincode as string,",
+				"          customer_type as string,",
+				"          occupation as string,",
+				"          annual_income as decimal(14,2),",
+				"          kyc_status as string,",
+				"          registration_date as date,",
+				"          branch_id as string,",
+				"          relationship_manager_id as string,",
+				"          pan_number as string,",
+				"          credit_score as integer",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'table',",
+				"     store: 'sqlserver',",
+				"     schemaName: 'dbo',",
+				"     tableName: 'dim_customers',",
+				"     isolationLevel: 'READ_UNCOMMITTED') ~> srcCustomers",
+				"source(output(",
+				"          transaction_id as string,",
+				"          account_number as string,",
+				"          transaction_date as date,",
+				"          transaction_time as timestamp,",
+				"          transaction_type as string,",
+				"          transaction_mode as string,",
+				"          category as string,",
+				"          channel as string,",
+				"          amount as decimal(14,2),",
+				"          currency as string,",
+				"          status as string,",
+				"          beneficiary_account as string,",
+				"          beneficiary_name as string,",
+				"          reference_number as string,",
+				"          narration as string,",
+				"          balance_after_txn as decimal(14,2),",
+				"          is_suspicious as boolean,",
+				"          is_internal_transfer as boolean,",
+				"          meta_device_id as string,",
+				"          meta_ip_address as string,",
+				"          meta_location_city as string,",
+				"          meta_processing_bank as string,",
+				"          meta_batch_id as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'table',",
+				"     store: 'sqlserver',",
+				"     schemaName: 'dbo',",
+				"     tableName: 'fact_transactions',",
+				"     isolationLevel: 'READ_UNCOMMITTED') ~> srcTransactions",
+				"source(output(",
+				"          loan_id as string,",
+				"          customer_id as string,",
+				"          loan_type as string,",
+				"          branch_id as string,",
+				"          sanction_date as date,",
+				"          disbursement_date as date,",
+				"          maturity_date as date,",
+				"          principal_amount as decimal(14,2),",
+				"          outstanding_amount as decimal(14,2),",
+				"          interest_rate as decimal(5,2),",
+				"          tenure_months as integer,",
+				"          emi_amount as decimal(12,2),",
+				"          emi_due_date as integer,",
+				"          total_emis_paid as integer,",
+				"          emis_overdue as integer,",
+				"          overdue_category as string,",
+				"          collateral_type as string,",
+				"          collateral_value as decimal(14,2),",
+				"          loan_status as string,",
+				"          loan_officer_id as string,",
+				"          is_npa as boolean,",
+				"          insurance_linked_flag as string",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'table',",
+				"     store: 'sqlserver',",
+				"     schemaName: 'dbo',",
+				"     tableName: 'fact_loans',",
+				"     isolationLevel: 'READ_UNCOMMITTED') ~> srcLoans",
+				"source(output(",
+				"          account_number as string,",
+				"          customer_id as string,",
+				"          account_type as string,",
+				"          branch_id as string,",
+				"          open_date as date,",
+				"          close_date as date,",
+				"          status as string,",
+				"          currency as string,",
+				"          interest_rate as decimal(5,2),",
+				"          is_joint_account as boolean,",
+				"          minimum_balance as decimal(10,2),",
+				"          nominee_name as string,",
+				"          missing_nominee_flag as boolean,",
+				"          account_age_years as integer",
+				"     ),",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'table',",
+				"     store: 'sqlserver',",
+				"     schemaName: 'dbo',",
+				"     tableName: 'dim_accounts',",
+				"     isolationLevel: 'READ_UNCOMMITTED') ~> srcAccounts",
+				"srcTransactions, srcAccounts join(srcTransactions@account_number == srcAccounts@account_number,",
+				"     joinType:'left',",
+				"     matchType:'exact',",
+				"     ignoreSpaces: false,",
+				"     broadcast: 'auto')~> joinTxnAccounts",
+				"joinTxnAccounts, srcCustomers join(srcAccounts@customer_id == srcCustomers@customer_id,",
+				"     joinType:'left',",
+				"     matchType:'exact',",
+				"     ignoreSpaces: false,",
+				"     broadcast: 'auto')~> joinCustTxn",
+				"joinCustTxn, srcLoans join(srcAccounts@customer_id == srcLoans@customer_id,",
+				"     joinType:'left',",
+				"     matchType:'exact',",
+				"     ignoreSpaces: false,",
+				"     broadcast: 'auto')~> joinWithLoans",
+				"joinWithLoans aggregate(groupBy(srcCustomers@customer_id,",
+				"          first_name,",
+				"          last_name,",
+				"          city,",
+				"          credit_score),",
+				"     total_transactions = count(1),",
+				"          total_transaction_value = sum(toDouble(amount)),",
+				"          total_loans = count(loan_id),",
+				"          total_loan_amount = sum(toDouble(principal_amount)),",
+				"          avg_loan_amount = avg(toDouble(principal_amount))) ~> aggCustomer360",
+				"aggCustomer360 derive(report_date = currentDate(),",
+				"          customer_id = toString(customer_id)) ~> derivedCustomer360Cols",
+				"derivedCustomer360Cols sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'table',",
+				"     store: 'sqlserver',",
+				"     schemaName: 'dbo',",
+				"     tableName: 'agg_customer_360',",
+				"     insertable: true,",
+				"     updateable: false,",
+				"     deletable: false,",
+				"     upsertable: false,",
+				"     truncate: true,",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError') ~> sinkAggCustomer360"
+			]
+		}
+	}
+}
