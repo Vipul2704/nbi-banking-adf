@@ -892,6 +892,82 @@
 							},
 							"traceLevel": "Fine"
 						}
+					},
+					{
+						"name": "df_load_dim_branches",
+						"type": "ExecuteDataFlow",
+						"dependsOn": [
+							{
+								"activity": "df_load_dim_employees",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.00:30:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataflow": {
+								"referenceName": "df_load_dim_branches",
+								"type": "DataFlowReference",
+								"parameters": {},
+								"datasetParameters": {
+									"srcCustomerBranches": {},
+									"srcAccountBranches": {},
+									"srcEmployeeBranches": {},
+									"sinkDimBranches": {}
+								}
+							},
+							"staging": {},
+							"compute": {
+								"coreCount": 8,
+								"computeType": "General"
+							},
+							"traceLevel": "Fine"
+						}
+					},
+					{
+						"name": "df_load_dim_loan_types",
+						"type": "ExecuteDataFlow",
+						"dependsOn": [
+							{
+								"activity": "df_load_dim_branches",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.00:30:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataflow": {
+								"referenceName": "df_load_dim_loan_types",
+								"type": "DataFlowReference",
+								"parameters": {},
+								"datasetParameters": {
+									"srcLoans": {},
+									"sinkDimLoanTypes": {}
+								}
+							},
+							"staging": {},
+							"compute": {
+								"coreCount": 8,
+								"computeType": "General"
+							},
+							"traceLevel": "Fine"
+						}
 					}
 				],
 				"policy": {
@@ -908,7 +984,9 @@
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/dataflows/df_load_dim_customers')]",
 				"[concat(variables('factoryId'), '/dataflows/df_load_dim_accounts')]",
-				"[concat(variables('factoryId'), '/dataflows/df_load_dim_employees')]"
+				"[concat(variables('factoryId'), '/dataflows/df_load_dim_employees')]",
+				"[concat(variables('factoryId'), '/dataflows/df_load_dim_branches')]",
+				"[concat(variables('factoryId'), '/dataflows/df_load_dim_loan_types')]"
 			]
 		}
 	]
