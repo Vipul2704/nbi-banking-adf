@@ -1,0 +1,80 @@
+{
+	"name": "df_load_fact_loans",
+	"properties": {
+		"type": "MappingDataFlow",
+		"typeProperties": {
+			"sources": [
+				{
+					"linkedService": {
+						"referenceName": "ls_blob_nbi_source",
+						"type": "LinkedServiceReference"
+					},
+					"name": "srcLoans"
+				}
+			],
+			"sinks": [
+				{
+					"linkedService": {
+						"referenceName": "ls_sqldb_nbi_dw",
+						"type": "LinkedServiceReference"
+					},
+					"name": "sinkFactLoans"
+				}
+			],
+			"transformations": [
+				{
+					"name": "derivedLoanCols"
+				}
+			],
+			"scriptLines": [
+				"source(output(",
+				"          branch_id as string,",
+				"          collateral_type as string,",
+				"          collateral_value as double,",
+				"          customer_id as string,",
+				"          disbursement_date as date,",
+				"          emi_amount as double,",
+				"          emi_due_date as short,",
+				"          emis_overdue as short,",
+				"          insurance_linked as boolean,",
+				"          interest_rate as double,",
+				"          is_npa as boolean,",
+				"          loan_id as string,",
+				"          loan_officer_id as string,",
+				"          loan_status as string,",
+				"          loan_type as string,",
+				"          maturity_date as date,",
+				"          outstanding_amount as double,",
+				"          principal_amount as double,",
+				"          sanction_date as date,",
+				"          tenure_months as short,",
+				"          total_emis_paid as short",
+				"     ),",
+				"     useSchema: false,",
+				"     allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     ignoreNoFilesFound: false,",
+				"     format: 'json',",
+				"     container: 'source-files',",
+				"     fileName: 'bank_loans.json',",
+				"     documentForm: 'arrayOfDocuments') ~> srcLoans",
+				"srcLoans derive(insurance_linked_flag = iif(insurance_linked == true(), 'Yes', 'No'),",
+				"          overdue_category = iif(emis_overdue == 0, 'No Overdue', iif(emis_overdue <= 3, 'Low', iif(emis_overdue <= 6, 'Medium', 'High')))) ~> derivedLoanCols",
+				"derivedLoanCols sink(allowSchemaDrift: true,",
+				"     validateSchema: false,",
+				"     format: 'table',",
+				"     store: 'sqlserver',",
+				"     schemaName: 'dbo',",
+				"     tableName: 'fact_loans',",
+				"     insertable: true,",
+				"     updateable: false,",
+				"     deletable: false,",
+				"     upsertable: false,",
+				"     truncate: true,",
+				"     skipDuplicateMapInputs: true,",
+				"     skipDuplicateMapOutputs: true,",
+				"     errorHandlingOption: 'stopOnFirstError') ~> sinkFactLoans"
+			]
+		}
+	}
+}
