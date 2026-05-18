@@ -131,6 +131,38 @@
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/linkedServices/ls_blob_nbi_source')]"
 			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/ds_blob_json_source')]",
+			"type": "Microsoft.DataFactory/factories/datasets",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"linkedServiceName": {
+					"referenceName": "ls_blob_nbi_source",
+					"type": "LinkedServiceReference"
+				},
+				"parameters": {
+					"fileName": {
+						"type": "string"
+					}
+				},
+				"annotations": [],
+				"type": "Json",
+				"typeProperties": {
+					"location": {
+						"type": "AzureBlobStorageLocation",
+						"fileName": {
+							"value": "@dataset().fileName",
+							"type": "Expression"
+						},
+						"container": "source-files"
+					}
+				},
+				"schema": {}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_blob_nbi_source')]"
+			]
 		}
 	]
 }
