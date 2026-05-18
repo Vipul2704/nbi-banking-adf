@@ -1,0 +1,23 @@
+{
+	"name": "ds_sqldb_nbi_target",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "ls_sqldb_nbi_dw",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"tableName": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [],
+		"typeProperties": {
+			"table": {
+				"value": "@dataset().tableName",
+				"type": "Expression"
+			}
+		}
+	}
+}
