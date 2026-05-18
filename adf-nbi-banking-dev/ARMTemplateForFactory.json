@@ -88,6 +88,43 @@
 							"variableName": "inactive_customer_count",
 							"value": 0
 						}
+					},
+					{
+						"name": "df_load_dim_accounts",
+						"type": "ExecuteDataFlow",
+						"dependsOn": [
+							{
+								"activity": "df_load_dim_customers",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataflow": {
+								"referenceName": "df_load_dim_accounts",
+								"type": "DataFlowReference",
+								"parameters": {},
+								"datasetParameters": {
+									"srcAccounts": {},
+									"sinkDimAccounts": {}
+								}
+							},
+							"staging": {},
+							"compute": {
+								"coreCount": 8,
+								"computeType": "General"
+							},
+							"traceLevel": "Fine"
+						}
 					}
 				],
 				"policy": {
@@ -102,7 +139,8 @@
 				"annotations": []
 			},
 			"dependsOn": [
-				"[concat(variables('factoryId'), '/dataflows/df_load_dim_customers')]"
+				"[concat(variables('factoryId'), '/dataflows/df_load_dim_customers')]",
+				"[concat(variables('factoryId'), '/dataflows/df_load_dim_accounts')]"
 			]
 		},
 		{
@@ -263,6 +301,88 @@
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/linkedServices/ls_keyvault_nbi')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_load_dim_accounts')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"linkedService": {
+								"referenceName": "ls_blob_nbi_source",
+								"type": "LinkedServiceReference"
+							},
+							"name": "srcAccounts"
+						}
+					],
+					"sinks": [
+						{
+							"linkedService": {
+								"referenceName": "ls_sqldb_nbi_dw",
+								"type": "LinkedServiceReference"
+							},
+							"name": "sinkDimAccounts"
+						}
+					],
+					"transformations": [
+						{
+							"name": "derivedAccountCols"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          account_number as string,",
+						"          customer_id as string,",
+						"          account_type as string,",
+						"          branch_id as string,",
+						"          open_date as date,",
+						"          close_date as date,",
+						"          status as string,",
+						"          current_balance as double,",
+						"          available_balance as double,",
+						"          currency as string,",
+						"          interest_rate as double,",
+						"          nominee_name as string,",
+						"          is_joint_account as boolean,",
+						"          minimum_balance as short",
+						"     ),",
+						"     useSchema: false,",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     format: 'delimited',",
+						"     container: 'source-files',",
+						"     fileName: 'bank_accounts.csv',",
+						"     columnDelimiter: ',',",
+						"     escapeChar: '\\\\',",
+						"     quoteChar: '\\\"',",
+						"     columnNamesAsHeader: true) ~> srcAccounts",
+						"srcAccounts derive(missing_nominee_flag = iif(isNull(nominee_name), 1, 0),",
+						"          account_age_years = year(currentDate()) - year(open_date)) ~> derivedAccountCols",
+						"derivedAccountCols sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     format: 'table',",
+						"     store: 'sqlserver',",
+						"     schemaName: 'dbo',",
+						"     tableName: 'dim_accounts',",
+						"     insertable: true,",
+						"     updateable: false,",
+						"     deletable: false,",
+						"     upsertable: false,",
+						"     truncate: true,",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     errorHandlingOption: 'stopOnFirstError') ~> sinkDimAccounts"
+					]
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_blob_nbi_source')]",
+				"[concat(variables('factoryId'), '/linkedServices/ls_sqldb_nbi_dw')]"
 			]
 		},
 		{
