@@ -46,6 +46,23 @@
 			"dependsOn": []
 		},
 		{
+			"name": "[concat(parameters('factoryName'), '/df_load_fact_account_balances')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [],
+					"sinks": [],
+					"transformations": [],
+					"scriptLines": [
+						""
+					]
+				}
+			},
+			"dependsOn": []
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/ls_blob_nbi_source')]",
 			"type": "Microsoft.DataFactory/factories/linkedServices",
 			"apiVersion": "2018-06-01",
@@ -754,6 +771,89 @@
 						"     skipDuplicateMapInputs: true,",
 						"     skipDuplicateMapOutputs: true,",
 						"     errorHandlingOption: 'stopOnFirstError') ~> sinkDimLoanTypes"
+					]
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_blob_nbi_source')]",
+				"[concat(variables('factoryId'), '/linkedServices/ls_sqldb_nbi_dw')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_load_fact_fraud_alerts')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"linkedService": {
+								"referenceName": "ls_blob_nbi_source",
+								"type": "LinkedServiceReference"
+							},
+							"name": "srcFraudAlerts"
+						}
+					],
+					"sinks": [
+						{
+							"linkedService": {
+								"referenceName": "ls_sqldb_nbi_dw",
+								"type": "LinkedServiceReference"
+							},
+							"name": "sinkFactFraudAlerts"
+						}
+					],
+					"transformations": [
+						{
+							"name": "derivedFraudCols"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          alert_id as string,",
+						"          transaction_id as string,",
+						"          account_number as string,",
+						"          customer_id as string,",
+						"          alert_type as string,",
+						"          severity as string,",
+						"          alert_raised_date as date,",
+						"          alert_raised_time as string,",
+						"          alert_status as string,",
+						"          assigned_to as string,",
+						"          resolution as string,",
+						"          resolved_date as date,",
+						"          resolution_days as short,",
+						"          amount_at_risk as double,",
+						"          is_confirmed_fraud as boolean,",
+						"          sar_filed as boolean",
+						"     ),",
+						"     useSchema: false,",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     format: 'delimited',",
+						"     container: 'source-files',",
+						"     fileName: 'bank_fraud_alerts.csv',",
+						"     columnDelimiter: ',',",
+						"     escapeChar: '\\\\',",
+						"     quoteChar: '\\\"',",
+						"     columnNamesAsHeader: true) ~> srcFraudAlerts",
+						"srcFraudAlerts derive(is_resolved = iif(isNull(resolved_date), false(), true())) ~> derivedFraudCols",
+						"derivedFraudCols sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     format: 'table',",
+						"     store: 'sqlserver',",
+						"     schemaName: 'dbo',",
+						"     tableName: 'fact_fraud_alerts',",
+						"     insertable: true,",
+						"     updateable: false,",
+						"     deletable: false,",
+						"     upsertable: false,",
+						"     truncate: true,",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     errorHandlingOption: 'stopOnFirstError') ~> sinkFactFraudAlerts"
 					]
 				}
 			},
