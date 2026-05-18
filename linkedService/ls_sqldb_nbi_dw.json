@@ -1,0 +1,24 @@
+{
+	"name": "ls_sqldb_nbi_dw",
+	"properties": {
+		"annotations": [],
+		"type": "AzureSqlDatabase",
+		"typeProperties": {
+			"server": "sql-nbi-banking-srv.database.windows.net",
+			"database": "sqldb-nbi-banking-dw",
+			"encrypt": "mandatory",
+			"trustServerCertificate": false,
+			"authenticationType": "SQL",
+			"userName": "sqladmin",
+			"password": {
+				"type": "AzureKeyVaultSecret",
+				"store": {
+					"referenceName": "ls_keyvault_nbi",
+					"type": "LinkedServiceReference"
+				},
+				"secretName": "sql-db-password",
+				"secretVersion": "6582ddb3251d4d5a81fda12b3bcf8d31"
+			}
+		}
+	}
+}
