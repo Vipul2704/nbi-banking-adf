@@ -457,6 +457,9 @@
 						},
 						{
 							"name": "joinWithFraud"
+						},
+						{
+							"name": "filterValidCustomers"
 						}
 					],
 					"scriptLines": [
@@ -615,7 +618,7 @@
 						"     matchType:'exact',",
 						"     ignoreSpaces: false,",
 						"     broadcast: 'auto')~> joinWithLoans",
-						"joinWithFraud aggregate(groupBy(srcCustomers@customer_id,",
+						"filterValidCustomers aggregate(groupBy(srcCustomers@customer_id,",
 						"          first_name,",
 						"          last_name,",
 						"          city,",
@@ -638,6 +641,7 @@
 						"     matchType:'exact',",
 						"     ignoreSpaces: false,",
 						"     broadcast: 'auto')~> joinWithFraud",
+						"joinWithFraud filter(!isNull(srcCustomers@customer_id)) ~> filterValidCustomers",
 						"derivedCustomer360Cols sink(allowSchemaDrift: true,",
 						"     validateSchema: false,",
 						"     format: 'table',",
@@ -1727,38 +1731,6 @@
 			"properties": {
 				"activities": [
 					{
-						"name": "df_build_agg_branch_performance",
-						"type": "ExecuteDataFlow",
-						"dependsOn": [],
-						"policy": {
-							"timeout": "0.00:30:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"dataflow": {
-								"referenceName": "df_build_agg_branch_performance",
-								"type": "DataFlowReference",
-								"parameters": {},
-								"datasetParameters": {
-									"srcTransactions": {},
-									"srcAccounts": {},
-									"srcLoans": {},
-									"sinkAggBranchPerformance": {}
-								}
-							},
-							"staging": {},
-							"compute": {
-								"coreCount": 8,
-								"computeType": "General"
-							},
-							"traceLevel": "Fine"
-						}
-					},
-					{
 						"name": "df_build_agg_customer_360",
 						"type": "ExecuteDataFlow",
 						"dependsOn": [],
@@ -1836,7 +1808,6 @@
 				"annotations": []
 			},
 			"dependsOn": [
-				"[concat(variables('factoryId'), '/dataflows/df_build_agg_branch_performance')]",
 				"[concat(variables('factoryId'), '/dataflows/df_build_agg_customer_360')]",
 				"[concat(variables('factoryId'), '/dataflows/df_build_agg_fraud_summary')]"
 			]
