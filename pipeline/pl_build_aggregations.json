@@ -29,14 +29,7 @@
 			{
 				"name": "df_build_agg_customer_360",
 				"type": "ExecuteDataFlow",
-				"dependsOn": [
-					{
-						"activity": "df_build_agg_branch_performance",
-						"dependencyConditions": [
-							"Succeeded"
-						]
-					}
-				],
+				"dependsOn": [],
 				"policy": {
 					"timeout": "0.00:30:00",
 					"retry": 0,
