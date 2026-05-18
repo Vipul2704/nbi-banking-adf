@@ -33,6 +33,79 @@
 	},
 	"resources": [
 		{
+			"name": "[concat(parameters('factoryName'), '/pl_load_dimensions')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "df_load_dim_customers",
+						"type": "ExecuteDataFlow",
+						"dependsOn": [
+							{
+								"activity": "set_inactive_customer_count",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.00:30:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataflow": {
+								"referenceName": "df_load_dim_customers",
+								"type": "DataFlowReference",
+								"parameters": {},
+								"datasetParameters": {
+									"srcCustomers": {},
+									"sinkDimCustomers": {}
+								}
+							},
+							"staging": {},
+							"compute": {
+								"coreCount": 8,
+								"computeType": "General"
+							},
+							"traceLevel": "Fine"
+						}
+					},
+					{
+						"name": "set_inactive_customer_count",
+						"type": "SetVariable",
+						"dependsOn": [],
+						"policy": {
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"variableName": "inactive_customer_count",
+							"value": 0
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"variables": {
+					"inactive_customer_count": {
+						"type": "Integer",
+						"defaultValue": 0
+					}
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/dataflows/df_load_dim_customers')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/ds_blob_csv_source')]",
 			"type": "Microsoft.DataFactory/factories/datasets",
 			"apiVersion": "2018-06-01",
@@ -190,6 +263,119 @@
 			},
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/linkedServices/ls_keyvault_nbi')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/df_load_dim_customers')]",
+			"type": "Microsoft.DataFactory/factories/dataflows",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"type": "MappingDataFlow",
+				"typeProperties": {
+					"sources": [
+						{
+							"linkedService": {
+								"referenceName": "ls_blob_nbi_source",
+								"type": "LinkedServiceReference"
+							},
+							"name": "srcCustomers"
+						}
+					],
+					"sinks": [
+						{
+							"linkedService": {
+								"referenceName": "ls_sqldb_nbi_dw",
+								"type": "LinkedServiceReference"
+							},
+							"name": "sinkDimCustomers"
+						}
+					],
+					"transformations": [
+						{
+							"name": "filterActiveCustomers"
+						},
+						{
+							"name": "selectCustomerCols"
+						}
+					],
+					"scriptLines": [
+						"source(output(",
+						"          customer_id as string,",
+						"          first_name as string,",
+						"          last_name as string,",
+						"          date_of_birth as date,",
+						"          gender as string,",
+						"          email as string,",
+						"          mobile as long,",
+						"          city as string,",
+						"          state as string,",
+						"          pincode as integer,",
+						"          customer_type as string,",
+						"          occupation as string,",
+						"          annual_income as double,",
+						"          kyc_status as string,",
+						"          registration_date as date,",
+						"          branch_id as string,",
+						"          relationship_manager_id as string,",
+						"          is_active as boolean,",
+						"          pan_number as string,",
+						"          credit_score as short",
+						"     ),",
+						"     useSchema: false,",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     ignoreNoFilesFound: false,",
+						"     format: 'delimited',",
+						"     container: 'source-files',",
+						"     fileName: 'bank_customers.csv',",
+						"     columnDelimiter: ',',",
+						"     escapeChar: '\\\\',",
+						"     quoteChar: '\\\"',",
+						"     columnNamesAsHeader: true) ~> srcCustomers",
+						"srcCustomers filter(is_active == true()) ~> filterActiveCustomers",
+						"filterActiveCustomers select(mapColumn(",
+						"          customer_id,",
+						"          first_name,",
+						"          last_name,",
+						"          date_of_birth,",
+						"          gender,",
+						"          email,",
+						"          mobile,",
+						"          city,",
+						"          state,",
+						"          pincode,",
+						"          customer_type,",
+						"          occupation,",
+						"          annual_income,",
+						"          kyc_status,",
+						"          registration_date,",
+						"          branch_id,",
+						"          relationship_manager_id,",
+						"          pan_number,",
+						"          credit_score",
+						"     ),",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true) ~> selectCustomerCols",
+						"selectCustomerCols sink(allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     format: 'table',",
+						"     store: 'sqlserver',",
+						"     schemaName: 'dbo',",
+						"     tableName: 'dim_customers',",
+						"     insertable: true,",
+						"     updateable: false,",
+						"     deletable: false,",
+						"     upsertable: false,",
+						"     truncate: true,",
+						"     skipDuplicateMapInputs: true,",
+						"     skipDuplicateMapOutputs: true,",
+						"     errorHandlingOption: 'stopOnFirstError') ~> sinkDimCustomers"
+					]
+				}
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/linkedServices/ls_blob_nbi_source')]",
+				"[concat(variables('factoryId'), '/linkedServices/ls_sqldb_nbi_dw')]"
 			]
 		}
 	]
