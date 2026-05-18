@@ -58,6 +58,7 @@
 								"datasetParameters": {
 									"srcTransactions": {},
 									"srcAccounts": {},
+									"srcLoans": {},
 									"sinkAggBranchPerformance": {}
 								}
 							},
@@ -735,6 +736,13 @@
 								"type": "LinkedServiceReference"
 							},
 							"name": "srcAccounts"
+						},
+						{
+							"linkedService": {
+								"referenceName": "ls_sqldb_nbi_dw",
+								"type": "LinkedServiceReference"
+							},
+							"name": "srcLoans"
 						}
 					],
 					"sinks": [
@@ -755,6 +763,9 @@
 						},
 						{
 							"name": "derivedBranchCols"
+						},
+						{
+							"name": "joinWithLoans"
 						}
 					],
 					"scriptLines": [
@@ -813,17 +824,54 @@
 						"     schemaName: 'dbo',",
 						"     tableName: 'dim_accounts',",
 						"     isolationLevel: 'READ_UNCOMMITTED') ~> srcAccounts",
+						"source(output(",
+						"          loan_id as string,",
+						"          customer_id as string,",
+						"          loan_type as string,",
+						"          branch_id as string,",
+						"          sanction_date as date,",
+						"          disbursement_date as date,",
+						"          maturity_date as date,",
+						"          principal_amount as decimal(14,2),",
+						"          outstanding_amount as decimal(14,2),",
+						"          interest_rate as decimal(5,2),",
+						"          tenure_months as integer,",
+						"          emi_amount as decimal(12,2),",
+						"          emi_due_date as integer,",
+						"          total_emis_paid as integer,",
+						"          emis_overdue as integer,",
+						"          overdue_category as string,",
+						"          collateral_type as string,",
+						"          collateral_value as decimal(14,2),",
+						"          loan_status as string,",
+						"          loan_officer_id as string,",
+						"          is_npa as boolean,",
+						"          insurance_linked_flag as string",
+						"     ),",
+						"     allowSchemaDrift: true,",
+						"     validateSchema: false,",
+						"     format: 'table',",
+						"     store: 'sqlserver',",
+						"     schemaName: 'dbo',",
+						"     tableName: 'fact_loans',",
+						"     isolationLevel: 'READ_UNCOMMITTED') ~> srcLoans",
 						"srcTransactions, srcAccounts join(srcTransactions@account_number == srcAccounts@account_number,",
 						"     joinType:'inner',",
 						"     matchType:'exact',",
 						"     ignoreSpaces: false,",
 						"     broadcast: 'auto')~> joinTxnAccounts",
-						"joinTxnAccounts aggregate(groupBy(branch_id),",
+						"joinWithLoans aggregate(groupBy(srcAccounts@branch_id),",
 						"     total_transactions = count(transaction_id),",
 						"          total_transaction_value = sum(amount),",
 						"          avg_transaction_value = avg(amount),",
-						"          total_accounts = countDistinct(srcAccounts@account_number)) ~> aggBranchPerformance",
+						"          total_accounts = countDistinct(srcAccounts@account_number),",
+						"          total_npa_loans = sum(iif(is_npa == true(), 1, 0))) ~> aggBranchPerformance",
 						"aggBranchPerformance derive(report_date = currentDate()) ~> derivedBranchCols",
+						"joinTxnAccounts, srcLoans join(srcAccounts@branch_id == srcLoans@branch_id,",
+						"     joinType:'left',",
+						"     matchType:'exact',",
+						"     ignoreSpaces: false,",
+						"     broadcast: 'auto')~> joinWithLoans",
 						"derivedBranchCols sink(allowSchemaDrift: true,",
 						"     validateSchema: false,",
 						"     format: 'table',",
